@@ -1,15 +1,19 @@
-from django.core.paginator import Paginator
 from django.shortcuts import render, get_object_or_404
-from rest_framework import viewsets
-from rest_framework.response import Response
+from rest_framework import viewsets, status
 
 # Create your views here.
+from mintpay.utils import FinalResponse
 from products.models import Product
 from products.serializers import ProductSerializer
 
 
 class ProductViewSet(viewsets.ViewSet):
     def list(self,request):
+        """
+        product list service.
+        service url: api/product/
+
+        """
         qs = Product.objects.all()
 
         brand_name = request.GET.get("brand_name")
@@ -20,33 +24,32 @@ class ProductViewSet(viewsets.ViewSet):
         limit = int(request.GET.get('limit', '10'))
         skip = request.GET.get('skip')
 
+        # product list limit will apply when 'skip' query parameter is null, else limit will be applied
         if skip is None:
-            print("sf")
             qs = qs[:limit]
 
         serializer = ProductSerializer(qs,many=True)
 
-        return Response(serializer.data)
+        return FinalResponse(status.HTTP_200_OK, data= serializer.data)
 
     def retrieve(self, request, pk=None):
         product_obj = get_object_or_404(Product,pk=pk)
         serializer = ProductSerializer(product_obj)
-        return Response(serializer.data)
+        return FinalResponse(status.HTTP_200_OK, data= serializer.data)
 
     def create(self,request):
-        ## product sku can be auto genarated
+        # todo: product sku can be auto genarated
         req_data = request.data
         serializer = ProductSerializer(data=req_data)
 
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors)
+            return FinalResponse(status.HTTP_201_CREATED, data= serializer.data)
+        return FinalResponse(status.HTTP_400_BAD_REQUEST, errors= serializer.errors)
 
     def destroy(self,request,pk=None):
-        print("delete")
 
         product_obj = get_object_or_404(Product,pk=pk)
         product_obj.delete()
-        return Response(f"{pk} is deleted")
+        return FinalResponse(status.HTTP_200_OK, message = f"{pk} is deleted")
 
